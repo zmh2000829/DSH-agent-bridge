@@ -31,7 +31,7 @@
     "./package.json": "./package.json"
   },
   "bin": {
-    "dsh-grok": "./bin/dsh-grok.mjs"
+    "dsh-grok": "bin/dsh-grok.mjs"
   },
   "files": [
     "bin",
