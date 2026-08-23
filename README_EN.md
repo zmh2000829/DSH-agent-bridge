@@ -94,7 +94,7 @@ Choose either installation method; do not run both. The Grok preset loads direct
 ### Verify the installation
 
 ```sh
-node ./bin/dsh-grok.mjs doctor
+dsh plugin --profile web exec dsh-grok doctor
 ```
 
 The report should show that DSH, Grok, the Bundle, the preset, and the client build are ready.
@@ -142,7 +142,14 @@ Advanced deployments can override `command`, `args`, `env`, `stateFile`, `dispos
 
 Update an npm installation with `dsh plugin --profile web add dsh-grok-acp@latest`. For a source installation, run `git pull`, `npm install --legacy-peer-deps`, `npm run check`, and `dsh plugin --profile web add "$(pwd)"` from the cloned project directory.
 
-To uninstall, remove `dsh-grok-acp` from both `dependencies` and `dsh.profile.bundles` in `~/.dsh/profiles/web/package.json`, run `pnpm install` in that directory, and restart DSH. The plugin does not remove Grok authentication or Grok session files.
+Uninstall through the profile command, then restart DSH:
+
+```sh
+dsh plugin --profile web remove dsh-grok-acp
+dsh web
+```
+
+Do not edit `~/.dsh/profiles/web/package.json` by hand. Removing the plugin does not remove Grok authentication or Grok session files.
 
 ## Development and publishing
 

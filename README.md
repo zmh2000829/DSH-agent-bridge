@@ -94,7 +94,7 @@ dsh plugin --profile web add /Users/your-name/Projects/DSH-agent-bridge
 ### 检查安装
 
 ```sh
-node ./bin/dsh-grok.mjs doctor
+dsh plugin --profile web exec dsh-grok doctor
 ```
 
 应显示 DSH、Grok、Bundle、preset 和客户端构建均已就绪。
@@ -157,7 +157,14 @@ npm run check
 dsh plugin --profile web add "$(pwd)"
 ```
 
-卸载时，从 `~/.dsh/profiles/web/package.json` 的 `dependencies` 和 `dsh.profile.bundles` 中移除 `dsh-grok-acp`，然后在该目录执行 `pnpm install` 并重启 DSH。插件不会删除 Grok 自己的登录信息或会话文件。
+卸载时运行：
+
+```sh
+dsh plugin --profile web remove dsh-grok-acp
+dsh web
+```
+
+不要手工编辑 `~/.dsh/profiles/web/package.json`。卸载插件不会删除 Grok 自己的登录信息或会话文件。
 
 ## 开发与发布
 

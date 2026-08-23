@@ -45,9 +45,12 @@ function setup() {
   }
   const grokVersion = commandOutput(grokCommand, ['--version'])
   process.stdout.write(`Installing for dsh ${version}; ${grokVersion}\n`)
-  commandOutput('npm', ['install', '--legacy-peer-deps'], packageRoot)
-  commandOutput('npm', ['run', 'build'], packageRoot)
-  commandOutput(dshCommand, ['plugin', '--profile', 'web', 'add', `link:${packageRoot}`])
+  const sourceCheckout = existsSync(join(packageRoot, '.git'))
+  if (sourceCheckout && !existsSync(join(packageRoot, 'lib', 'client.js'))) {
+    throw new Error('source checkout is not built; run "npm ci --legacy-peer-deps && npm run check" first')
+  }
+  const packageSpec = sourceCheckout ? packageRoot : 'dsh-grok-acp@latest'
+  commandOutput(dshCommand, ['plugin', '--profile', 'web', 'add', packageSpec])
   process.stdout.write(`Installed Grok Build ACP in ${dshHome}.\nRun "dsh-grok web" and choose DSH or Grok Build in the composer.\n`)
 }
 
