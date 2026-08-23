@@ -1,0 +1,9 @@
+# Add Grok Build as a selectable root harness without changing DSH packages.
+- insert:
+    - id: grok-acp
+      name: dsh-grok-acp
+      config:
+        command: !!js process.env.GROK_COMMAND || 'grok'
+        args: [agent, --no-leader, stdio]
+        stateFile: !!js (process.env.DSH_HOME || (process.env.HOME + '/.dsh')) + '/grok-harness-sessions.json'
+        yoloMode: true
