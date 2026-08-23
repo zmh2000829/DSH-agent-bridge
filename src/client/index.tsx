@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react'
 import type { Context } from '@deepseek-ai/cordis'
+import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-slots'
 
@@ -9,6 +10,35 @@ const SESSION_PATH = '/grok-acp/session'
 const STATUS_EVENT = 'dsh-grok-acp:status'
 const CORDIS_ORIGINAL = Symbol.for('cordis.original')
 const replacingSessions = new Set<string>()
+const LOCALE_NS = 'dsh-grok-acp'
+
+const en = {
+  unavailable: 'Harness unavailable',
+  harnessHint: 'Choose the execution engine for this session',
+  harnessLocked: 'The harness cannot change after the session starts',
+  presetHint: 'Agent preset for the DSH session about to start',
+  presetMenu: 'Agent presets',
+  grokModels: 'Grok Build models',
+  noGrokModels: 'Grok Build did not report selectable models',
+  reasoningEffort: 'Reasoning effort',
+  dshModel: 'DSH model',
+  chooseModel: 'Choose model',
+} as const
+
+const zh: Record<keyof typeof en, string> = {
+  unavailable: 'Harness 不可用',
+  harnessHint: '选择本会话的执行引擎',
+  harnessLocked: '会话开始后不能再切换 Harness',
+  presetHint: '选择即将开始的 DSH 会话所用的 Agent 预设',
+  presetMenu: 'Agent 预设',
+  grokModels: 'Grok Build 模型',
+  noGrokModels: 'Grok Build 未报告可选模型',
+  reasoningEffort: '推理力度',
+  dshModel: 'DSH 模型',
+  chooseModel: '选择模型',
+}
+
+type Translate = (key: keyof typeof en) => string
 
 interface GrokEffort {
   id: string
@@ -215,11 +245,12 @@ function useHarness(sessionId: string | undefined, session?: { running?: boolean
 }
 
 function HarnessPicker({
-  sessionId, session, clearComposerBlock,
+  sessionId, session, clearComposerBlock, t,
 }: {
   sessionId: string
   session: { running: boolean; blank?: boolean }
   clearComposerBlock?: (sessionId: string) => void
+  t: Translate
 }) {
   const { snapshot, setSnapshot, error, setError } = useHarness(sessionId, session)
   const [saving, setSaving] = useState(false)
@@ -230,7 +261,7 @@ function HarnessPicker({
   }, [clearComposerBlock, sessionId, snapshot?.harness])
 
   if (snapshot === undefined) {
-    return error ? <span title={error} style={{ opacity: 0.5, fontSize: 12 }}>Harness unavailable</span> : null
+    return error ? <span title={error} style={{ opacity: 0.5, fontSize: 12 }}>{t('unavailable')}</span> : null
   }
 
   const locked = saving || snapshot.running || !snapshot.blank
@@ -252,7 +283,7 @@ function HarnessPicker({
   }
 
   return (
-    <div style={wrap} title={locked && !snapshot.blank ? '会话开始后 Harness 不能再切换' : '选择本会话的执行引擎'}>
+    <div style={wrap} title={locked && !snapshot.blank ? t('harnessLocked') : t('harnessHint')}>
       <div role="group" aria-label="Harness" style={group}>
         <button type="button" aria-pressed={!grok} disabled={locked} style={optionStyle(!grok, locked)} onClick={() => { void select('dsh') }}>
           DSH
@@ -266,7 +297,7 @@ function HarnessPicker({
   )
 }
 
-function HeroAgentPresetSeat({ sessions }: { sessions: SessionListStore }) {
+function HeroAgentPresetSeat({ sessions, t }: { sessions: SessionListStore; t: Translate }) {
   const list = useSyncExternalStore(sessions.subscribe, sessions.getSnapshot)
   const sessionId = list.current
   const session = sessionId === undefined ? undefined : list.byId[sessionId]
@@ -310,13 +341,13 @@ function HeroAgentPresetSeat({ sessions }: { sessions: SessionListStore }) {
         style={trigger}
         aria-haspopup="menu"
         aria-expanded={open}
-        title={error ?? '选择即将开始的 DSH 会话所用的 Agent 预设'}
+        title={error ?? t('presetHint')}
         onClick={() => { setOpen(value => !value) }}
       >
         {label} ⌄
       </button>
       {open && (
-        <div role="menu" aria-label="Agent 预设" style={{ ...menu, right: 'auto', left: 0, bottom: 'auto', top: 'calc(100% + 8px)' }}>
+        <div role="menu" aria-label={t('presetMenu')} style={{ ...menu, right: 'auto', left: 0, bottom: 'auto', top: 'calc(100% + 8px)' }}>
           {snapshot.dshPresets.map(preset => (
             <button
               key={preset.id}
@@ -336,12 +367,13 @@ function HeroAgentPresetSeat({ sessions }: { sessions: SessionListStore }) {
 }
 
 function GrokModelSeat({
-  sessionId, locked, snapshot, onChange,
+  sessionId, locked, snapshot, onChange, t,
 }: {
   sessionId: string
   locked: boolean
   snapshot: HarnessSnapshot
   onChange: (snapshot: HarnessSnapshot) => void
+  t: Translate
 }) {
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -378,15 +410,15 @@ function GrokModelSeat({
         {triggerLabel}
       </button>
       {open && (
-        <div role="listbox" aria-label="Grok Build 模型" style={menu}>
-          <div style={{ padding: '4px 10px 6px', fontSize: 11, opacity: 0.55 }}>Grok Build 模型</div>
-          {models.length === 0 && <div style={{ padding: '8px 10px', fontSize: 12, opacity: 0.6 }}>Grok Build 未报告可选模型</div>}
+        <div role="listbox" aria-label={t('grokModels')} style={menu}>
+          <div style={{ padding: '4px 10px 6px', fontSize: 11, opacity: 0.55 }}>{t('grokModels')}</div>
+          {models.length === 0 && <div style={{ padding: '8px 10px', fontSize: 12, opacity: 0.6 }}>{t('noGrokModels')}</div>}
           {models.map(model => (
             <button key={model.id} type="button" role="option" aria-selected={model.id === snapshot.grok.model} style={menuItem(model.id === snapshot.grok.model)} onClick={() => { void choose({ modelId: model.id }) }}>
               {model.name}
             </button>
           ))}
-          {efforts.length > 0 && <div style={{ padding: '8px 10px 6px', fontSize: 11, opacity: 0.55 }}>推理力度</div>}
+          {efforts.length > 0 && <div style={{ padding: '8px 10px 6px', fontSize: 11, opacity: 0.55 }}>{t('reasoningEffort')}</div>}
           {efforts.map(item => (
             <button key={item.id} type="button" role="option" aria-selected={item.id === effort} style={menuItem(item.id === effort)} onClick={() => { void choose({ effort: item.id }) }}>
               {item.label}
@@ -399,12 +431,13 @@ function GrokModelSeat({
 }
 
 function DshModelSeat({
-  locked, directory, load, select,
+  locked, directory, load, select, t,
 }: {
   locked: boolean
   directory?: { subscribe: (fn: () => void) => () => void; getSnapshot: () => { current: { provider: string; model: string; reasoningEffort?: string } | null; groups: Array<{ id: string; name: string; models: Array<{ id: string; name: string }> }> } }
   load?: () => void
   select?: (selection: { provider: string; model: string }) => Promise<boolean>
+  t: Translate
 }) {
   const state = useSyncExternalStore(
     directory === undefined ? () => () => undefined : fn => directory.subscribe(fn),
@@ -413,14 +446,14 @@ function DshModelSeat({
   const [open, setOpen] = useState(false)
   useEffect(() => { load?.() }, [load])
   const current = state.groups.flatMap(group => group.models.map(model => ({ group, model }))).find(row => row.group.id === state.current?.provider && row.model.id === state.current?.model)
-  const label = current?.model.name ?? state.current?.model ?? '选择模型'
+  const label = current?.model.name ?? state.current?.model ?? t('chooseModel')
   return (
     <div style={{ ...wrap, justifyContent: 'flex-end' }}>
       <button type="button" disabled={locked} style={trigger} aria-haspopup="listbox" aria-expanded={open} onClick={() => { setOpen(value => !value); load?.() }}>
         {label}
       </button>
       {open && (
-        <div role="listbox" aria-label="DSH model" style={menu}>
+        <div role="listbox" aria-label={t('dshModel')} style={menu}>
           {state.groups.flatMap(group => group.models.map(model => (
             <button
               key={`${group.id}/${model.id}`}
@@ -450,20 +483,23 @@ function ComposerModelSeat(props: {
   directory?: { subscribe: (fn: () => void) => () => void; getSnapshot: () => { current: { provider: string; model: string; reasoningEffort?: string } | null; groups: Array<{ id: string; name: string; models: Array<{ id: string; name: string }> }> } }
   loadDsh?: () => void
   selectDsh?: (selection: { provider: string; model: string }) => Promise<boolean>
+  t: Translate
 }) {
   const running = Boolean(props.useSession(state => state.running))
   const blank = Boolean(props.useSession(state => state.blank))
   const { snapshot, setSnapshot } = useHarness(props.sessionId, { running, blank })
   if (snapshot === undefined) return null
   if (snapshot.harness === 'grok-build') {
-    return <GrokModelSeat sessionId={props.sessionId} locked={props.locked} snapshot={snapshot} onChange={setSnapshot} />
+    return <GrokModelSeat sessionId={props.sessionId} locked={props.locked} snapshot={snapshot} onChange={setSnapshot} t={props.t} />
   }
-  return <DshModelSeat locked={props.locked} directory={props.directory} load={props.loadDsh} select={props.selectDsh} />
+  return <DshModelSeat locked={props.locked} directory={props.directory} load={props.loadDsh} select={props.selectDsh} t={props.t} />
 }
 
-export const inject = ['slots']
+export const inject = ['slots', 'locale']
 
 export function apply(ctx: Context): void {
+  ctx.effect(() => ctx.locale.register(LOCALE_NS, { zh, en }), 'dsh-grok-acp locale dictionaries')
+  const t = ctx.locale.bind(LOCALE_NS) as Translate
   ctx.inject(['sessions'], (scope: Context) => {
     const sessions = scope.get('sessions')
     scope.effect(() => installReplacementFrameFilter(sessions), 'dsh-grok-acp session replacement frames')
@@ -475,7 +511,8 @@ export function apply(ctx: Context): void {
     return ctx.slots.register({
       name: 'conversation.hero.agentPreset',
       priority: -1,
-      inject: () => ({ sessions: sessions.list }),
+      locale: LOCALE_NS,
+      inject: () => ({ sessions: sessions.list, t }),
     }, HeroAgentPresetSeat)
   })
 
@@ -484,7 +521,9 @@ export function apply(ctx: Context): void {
     id: 'grok-acp-harness',
     order: 10,
     label: 'Harness',
+    locale: LOCALE_NS,
     inject: () => ({
+      t,
       clearComposerBlock(id: string) {
         const conversation = ctx.get('conversation') as { blocks: { set: (sessionId: string, block: undefined) => void } } | undefined
         conversation?.blocks.set(id, undefined)
@@ -514,6 +553,7 @@ export function apply(ctx: Context): void {
               directory: directory.store,
               loadDsh: () => { directory.load().catch(() => undefined) },
               selectDsh: (selection: { provider: string; model: string }) => directory.select(selection).then(() => true, () => false),
+              t,
             }
           },
         }, ComposerModelSeat)
