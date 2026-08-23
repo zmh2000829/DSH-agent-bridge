@@ -23,6 +23,14 @@ const en = {
   reasoningEffort: 'Reasoning effort',
   dshModel: 'DSH model',
   chooseModel: 'Choose model',
+  standardName: 'Standard mode',
+  standardDescription: 'Full coding agent.',
+  codeName: 'PTC mode',
+  codeDescription: 'Combines multi-step operations through the Code Mode SDK.',
+  minimalName: 'Minimal mode',
+  minimalDescription: 'Persistent bash and file editing tools.',
+  cordisName: 'Creator mode',
+  cordisDescription: 'Creates custom agent presets.',
 } as const
 
 const zh: Record<keyof typeof en, string> = {
@@ -36,9 +44,32 @@ const zh: Record<keyof typeof en, string> = {
   reasoningEffort: '推理力度',
   dshModel: 'DSH 模型',
   chooseModel: '选择模型',
+  standardName: '标准模式',
+  standardDescription: '功能完整的编码 Agent。',
+  codeName: 'PTC 模式',
+  codeDescription: '通过 Code Mode SDK 组合多步操作。',
+  minimalName: '极简模式',
+  minimalDescription: '提供持久 Bash 和文件编辑工具。',
+  cordisName: '创造模式',
+  cordisDescription: '用于创建自定义 Agent preset。',
 }
 
 type Translate = (key: keyof typeof en) => string
+type DshPreset = HarnessSnapshot['dshPresets'][number]
+
+const BUILTIN_PRESET_KEYS = {
+  standard: ['standardName', 'standardDescription'],
+  code: ['codeName', 'codeDescription'],
+  minimal: ['minimalName', 'minimalDescription'],
+  cordis: ['cordisName', 'cordisDescription'],
+} as const
+
+function presetCopy(preset: DshPreset, t: Translate): { name: string; description: string } {
+  const keys = BUILTIN_PRESET_KEYS[preset.id as keyof typeof BUILTIN_PRESET_KEYS]
+  return keys === undefined
+    ? { name: preset.name, description: preset.description }
+    : { name: t(keys[0]), description: t(keys[1]) }
+}
 
 interface GrokEffort {
   id: string
@@ -317,7 +348,7 @@ function HeroAgentPresetSeat({ sessions, t }: { sessions: SessionListStore; t: T
 
   if (snapshot === undefined || snapshot.harness === 'grok-build') return null
   const current = snapshot.dshPresets.find(preset => preset.id === snapshot.preset)
-  const label = current?.name ?? snapshot.preset
+  const label = current === undefined ? snapshot.preset : presetCopy(current, t).name
 
   const select = async (preset: string): Promise<void> => {
     if (sessionId === undefined || saving || preset === snapshot.preset) return
@@ -348,18 +379,21 @@ function HeroAgentPresetSeat({ sessions, t }: { sessions: SessionListStore; t: T
       </button>
       {open && (
         <div role="menu" aria-label={t('presetMenu')} style={{ ...menu, right: 'auto', left: 0, bottom: 'auto', top: 'calc(100% + 8px)' }}>
-          {snapshot.dshPresets.map(preset => (
-            <button
-              key={preset.id}
-              type="button"
-              role="menuitem"
-              style={menuItem(preset.id === snapshot.preset)}
-              onClick={() => { void select(preset.id) }}
-            >
-              <span style={{ display: 'block', fontWeight: 600 }}>{preset.name}</span>
-              <span style={{ display: 'block', marginTop: 2, fontSize: 11, opacity: 0.6 }}>{preset.description}</span>
-            </button>
-          ))}
+          {snapshot.dshPresets.map((preset) => {
+            const copy = presetCopy(preset, t)
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                role="menuitem"
+                style={menuItem(preset.id === snapshot.preset)}
+                onClick={() => { void select(preset.id) }}
+              >
+                <span style={{ display: 'block', fontWeight: 600 }}>{copy.name}</span>
+                <span style={{ display: 'block', marginTop: 2, fontSize: 11, opacity: 0.6 }}>{copy.description}</span>
+              </button>
+            )
+          })}
         </div>
       )}
     </div>
