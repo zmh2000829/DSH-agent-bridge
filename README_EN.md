@@ -127,7 +127,7 @@ The default command is `grok agent --no-leader stdio`.
 | `DSH_HOME` | DSH home, defaulting to `~/.dsh` |
 | `XAI_API_KEY` | Optional value forwarded to the Grok process |
 
-Advanced deployments can override `command`, `args`, `env`, `stateFile`, `disposeGraceMs`, `idleDisposeMs`, and `yoloMode` in the Web profile's `cordis.patch.yml` entry.
+Advanced deployments can override `command`, `args`, `env`, `stateFile`, `disposeGraceMs`, `idleDisposeMs`, `yoloMode`, and `allowOutsideWorkspace` in the Web profile's `cordis.patch.yml` entry. Sensitive actions require approval by default, and ACP file operations stay inside the session workspace. Enable both `yoloMode` and `allowOutsideWorkspace` only when you explicitly accept host-wide access.
 
 ## ACP coverage
 
@@ -170,7 +170,7 @@ The project homepage, issue tracker, and source are available at [zmh2000829/DSH
 ## Security and limitations
 
 - The browser bridge accepts only loopback hosts and rejects cross-site requests. Writes require same-origin JSON requests.
-- ACP file requests resolve relative paths against the session workspace. Use the plugin only with trusted repositories and disable `yoloMode` when automatic approval is not appropriate.
+- ACP file operations stay inside the session workspace by default and reject escape through absolute paths, `..`, or symbolic links. `yoloMode` and `allowOutsideWorkspace` are explicit high-privilege options.
 - The plugin currently targets DSH `0.1.1-rc.2`. DSH prereleases may change internal AgentFactory or client Slot APIs; rerun tests and a real blank-session flow after upgrading DSH.
 - Terminal-layout features from the Grok Build TUI cannot be embedded unchanged. This project reuses agent capabilities and commands and renders them through DSH Web.
 - Codex and Claude Code adapters are not implemented yet. They should be separate adapters rather than conditional branches inside the Grok implementation.

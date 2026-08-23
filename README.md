@@ -129,7 +129,7 @@ Bundle 默认启动 `grok agent --no-leader stdio`。常用环境变量：
 | `DSH_HOME` | DSH home；默认 `~/.dsh` |
 | `XAI_API_KEY` | 可选，传给 Grok 子进程 |
 
-高级配置可在 Web profile 的 `cordis.patch.yml` 中覆盖插件行：`command`、`args`、`env`、`stateFile`、`disposeGraceMs`、`idleDisposeMs`、`yoloMode`。
+高级配置可在 Web profile 的 `cordis.patch.yml` 中覆盖插件行：`command`、`args`、`env`、`stateFile`、`disposeGraceMs`、`idleDisposeMs`、`yoloMode`、`allowOutsideWorkspace`。默认需要逐次批准敏感操作，ACP 文件接口也只能访问会话工作目录；只有在明确接受风险时，才同时开启 `yoloMode` 和 `allowOutsideWorkspace`。
 
 ## ACP 覆盖范围
 
@@ -185,7 +185,7 @@ npm pack --dry-run
 ## 安全与限制
 
 - 浏览器桥接路由只接受 loopback Host，并拒绝跨站请求；写操作要求同源 JSON 请求。
-- 文件读写由 ACP 请求发起，路径相对当前会话工作目录解析。请仅在可信仓库中使用，并根据需要关闭 `yoloMode`。
+- 文件读写由 ACP 请求发起，默认限制在当前会话工作目录，并拒绝通过绝对路径、`..` 或符号链接越界。`yoloMode` 与 `allowOutsideWorkspace` 都是显式的高权限选项。
 - 插件当前针对 DSH `0.1.1-rc.2` 开发。DSH 预发布版本可能改变内部 AgentFactory 或客户端 Slot API；升级 DSH 后先运行测试和真实空白会话验证。
 - Grok Build TUI 中依赖终端布局的界面不能原样嵌入 Web；本项目复用的是 Agent 能力和命令，通过 DSH Web 重新渲染。
 - 当前没有 Codex 或 Claude Code 适配器；它们应作为独立 adapter 接入，而不是向 Grok 实现中加入条件分支。
