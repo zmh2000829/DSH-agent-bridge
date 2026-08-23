@@ -30,6 +30,7 @@
 - Supports `/usage`, `/context`, `/session-info`, `/btw`, `/model`, and `/effort`, including the `/uasge` compatibility spelling.
 - The harness can change while a session is blank and locks after the first message to prevent mixed-engine history.
 - Grok sessions share one lazily started ACP process, which closes after the configured idle period.
+- If the ACP process exits unexpectedly, the next request restarts it and resumes the matching Grok session.
 - Installs as an independent DSH Bundle and does not modify the global DSH package or DeepSeek Harness source.
 
 | DSH | Grok Build |

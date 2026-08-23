@@ -30,6 +30,7 @@
 - 支持 `/usage`、`/context`、`/session-info`、`/btw`、`/model`、`/effort` 等 Grok 命令；兼容 `/uasge` 拼写。
 - 空白会话可切换 Harness；首轮消息发出后锁定，避免一段历史由两个 Agent 引擎共同生成。
 - 多个 Grok 会话复用一个按需启动的 ACP 进程，空闲后自动关闭。
+- ACP 进程异常退出后，下一次请求会自动重启进程并恢复对应的 Grok 会话。
 - 作为独立 DSH Bundle 安装，不修改全局 npm 包或 DeepSeek Harness 源码。
 
 | DSH | Grok Build |
