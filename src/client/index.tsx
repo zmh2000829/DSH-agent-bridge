@@ -4,7 +4,16 @@ import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties }
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
-import type {} from '@deepseek-ai/dsh-client-ui-slots'
+import type {
+  InjectFace, PropsLocale, PropsRuntime, SessionIdOf, TranslateNS,
+} from '@deepseek-ai/dsh-client-ui-slots'
+import {
+  modelCommandOptions,
+  modelCommandSelection,
+  type DshModelCommandState,
+  type ModelCommandOption,
+} from './model-command.js'
+import { ModelDirectoryResolver } from './model-directory.js'
 
 const SESSION_PATH = '/grok-acp/session'
 const STATUS_EVENT = 'dsh-grok-acp:status'
@@ -23,6 +32,9 @@ const en = {
   reasoningEffort: 'Reasoning effort',
   dshModel: 'DSH model',
   chooseModel: 'Choose model',
+  modelCommand: 'Select the model for the active Harness',
+  modelUnavailable: 'Model selection is unavailable',
+  staleModel: 'The model list changed; open the selector again',
   standardName: 'Standard mode',
   standardDescription: 'Full coding agent.',
   codeName: 'PTC mode',
@@ -44,6 +56,9 @@ const zh: Record<keyof typeof en, string> = {
   reasoningEffort: '推理力度',
   dshModel: 'DSH 模型',
   chooseModel: '选择模型',
+  modelCommand: '选择当前 Harness 使用的模型',
+  modelUnavailable: '模型选择不可用',
+  staleModel: '模型列表已变化，请重新打开选择器',
   standardName: '标准模式',
   standardDescription: '功能完整的编码 Agent。',
   codeName: 'PTC 模式',
@@ -54,7 +69,14 @@ const zh: Record<keyof typeof en, string> = {
   cordisDescription: '用于创建自定义 Agent preset。',
 }
 
-type Translate = (key: keyof typeof en) => string
+declare module '@deepseek-ai/dsh-client-ui-slots' {
+  interface LocaleNamespaceMap {
+    /** Copy owned by the Grok Build bridge controls. */
+    'dsh-grok-acp': keyof typeof en
+  }
+}
+
+type Translate = TranslateNS<typeof LOCALE_NS>
 type DshPreset = HarnessSnapshot['dshPresets'][number]
 
 const BUILTIN_PRESET_KEYS = {
@@ -116,6 +138,36 @@ interface HostEnvelope {
 
 interface SessionHostRuntime {
   handleHostEnvelope: (envelope: HostEnvelope) => void
+}
+
+interface ModelDirectoryFace {
+  store: {
+    getSnapshot: () => DshModelCommandState
+    subscribe: (fn: () => void) => () => void
+  }
+  load: () => Promise<DshModelCommandState>
+  select: (selection: { provider: string; model: string; reasoningEffort?: string }) => Promise<unknown>
+}
+
+interface ModelDirectoriesFace {
+  directoryFor: (sessionId: SessionIdOf) => ModelDirectoryFace
+}
+
+interface CommandSession {
+  sessionId: SessionIdOf
+}
+
+interface CommandUiFace {
+  register: (contribution: {
+    name: string
+    description: string
+    available: (session: CommandSession) => boolean
+    ui: {
+      kind: 'popupSelect'
+      options: (session: CommandSession) => Promise<ModelCommandOption[]>
+      onSelect: (option: ModelCommandOption, session: CommandSession) => Promise<void>
+    }
+  }) => () => void
 }
 
 const font = 'var(--dsw-font-family, ui-sans-serif, system-ui, sans-serif)'
@@ -275,14 +327,17 @@ function useHarness(sessionId: string | undefined, session?: { running?: boolean
   return { snapshot, setSnapshot, error, setError, load }
 }
 
+interface HarnessPickerInjected {
+  clearComposerBlock?: (sessionId: string) => void
+}
+
+type HarnessPickerProps = PropsRuntime<'conversation.input.left'>
+  & PropsLocale<typeof LOCALE_NS>
+  & InjectFace<HarnessPickerInjected>
+
 function HarnessPicker({
   sessionId, session, clearComposerBlock, t,
-}: {
-  sessionId: string
-  session: { running: boolean; blank?: boolean }
-  clearComposerBlock?: (sessionId: string) => void
-  t: Translate
-}) {
+}: HarnessPickerProps) {
   const { snapshot, setSnapshot, error, setError } = useHarness(sessionId, session)
   const [saving, setSaving] = useState(false)
 
@@ -328,7 +383,15 @@ function HarnessPicker({
   )
 }
 
-function HeroAgentPresetSeat({ sessions, t }: { sessions: SessionListStore; t: Translate }) {
+interface HeroAgentPresetInjected {
+  sessions: SessionListStore
+}
+
+type HeroAgentPresetProps = PropsRuntime<'conversation.hero.agentPreset'>
+  & PropsLocale<typeof LOCALE_NS>
+  & InjectFace<HeroAgentPresetInjected>
+
+function HeroAgentPresetSeat({ sessions, t }: HeroAgentPresetProps) {
   const list = useSyncExternalStore(sessions.subscribe, sessions.getSnapshot)
   const sessionId = list.current
   const session = sessionId === undefined ? undefined : list.byId[sessionId]
@@ -529,11 +592,12 @@ function ComposerModelSeat(props: {
   return <DshModelSeat locked={props.locked} directory={props.directory} load={props.loadDsh} select={props.selectDsh} t={props.t} />
 }
 
-export const inject = ['slots', 'locale']
+export const inject = ['slots', 'locale', 'commandUi', 'connection', 'sessions', 'remote']
 
 export function apply(ctx: Context): void {
   ctx.effect(() => ctx.locale.register(LOCALE_NS, { zh, en }), 'dsh-grok-acp locale dictionaries')
   const t = ctx.locale.bind(LOCALE_NS) as Translate
+  ctx.plugin(ModelDirectoryResolver, { blockReason: () => t('modelUnavailable') })
   ctx.inject(['sessions'], (scope: Context) => {
     const sessions = scope.get('sessions')
     scope.effect(() => installReplacementFrameFilter(sessions), 'dsh-grok-acp session replacement frames')
@@ -546,7 +610,7 @@ export function apply(ctx: Context): void {
       name: 'conversation.hero.agentPreset',
       priority: -1,
       locale: LOCALE_NS,
-      inject: () => ({ sessions: sessions.list, t }),
+      inject: (): HeroAgentPresetInjected => ({ sessions: sessions.list }),
     }, HeroAgentPresetSeat)
   })
 
@@ -556,8 +620,7 @@ export function apply(ctx: Context): void {
     order: 10,
     label: 'Harness',
     locale: LOCALE_NS,
-    inject: () => ({
-      t,
+    inject: (): HarnessPickerInjected => ({
       clearComposerBlock(id: string) {
         const conversation = ctx.get('conversation') as { blocks: { set: (sessionId: string, block: undefined) => void } } | undefined
         conversation?.blocks.set(id, undefined)
@@ -596,5 +659,41 @@ export function apply(ctx: Context): void {
         return () => undefined
       }
     })
+  })
+
+  ctx.inject(['commandUi', 'modelDirectories', 'sessions'], (scope: Context) => {
+    const command = scope.get('commandUi') as CommandUiFace
+    const models = scope.get('modelDirectories') as ModelDirectoriesFace
+    const sessions = scope.get('sessions') as { subagentAddress: (sessionId: SessionIdOf) => unknown }
+    const contribution = (name: 'model' | 'models') => ({
+      name,
+      description: t('modelCommand'),
+      available: (session: CommandSession) => sessions.subagentAddress(session.sessionId) === undefined,
+      ui: {
+        kind: 'popupSelect' as const,
+        options: async (session: CommandSession): Promise<ModelCommandOption[]> => {
+          const snapshot = await readStatus(session.sessionId)
+          if (snapshot === undefined) throw new Error(t('unavailable'))
+          const dsh = snapshot.harness === 'dsh'
+            ? await models.directoryFor(session.sessionId).load()
+            : undefined
+          return modelCommandOptions(snapshot, dsh)
+        },
+        onSelect: async (option: ModelCommandOption, session: CommandSession): Promise<void> => {
+          const snapshot = await readStatus(session.sessionId)
+          if (snapshot === undefined) throw new Error(t('unavailable'))
+          const directory = snapshot.harness === 'dsh' ? models.directoryFor(session.sessionId) : undefined
+          const selection = modelCommandSelection(option.id, snapshot, directory?.store.getSnapshot())
+          if (selection === undefined) throw new Error(t('staleModel'))
+          if (selection.kind === 'grok') {
+            await writeStatus({ sessionId: session.sessionId, modelId: selection.modelId })
+          } else {
+            await directory?.select(selection.selection)
+          }
+        },
+      },
+    })
+    scope.effect(() => command.register(contribution('model')), 'dsh-grok-acp /model contribution')
+    scope.effect(() => command.register(contribution('models')), 'dsh-grok-acp /models contribution')
   })
 }

@@ -27,7 +27,7 @@
 - Grok Build 模式只展示 ACP 实际报告的模型和推理力度，并隐藏无关的 DSH Agent 预设。
 - ACP 流式输出映射为 DSH 的回答、思考、工具调用、计划和 diff。
 - Grok 权限请求进入 DSH 的批准界面。
-- 支持 `/usage`、`/context`、`/session-info`、`/btw`、`/model`、`/effort` 等 Grok 命令；兼容 `/uasge` 拼写。
+- 支持 `/usage`、`/context`、`/session-info`、`/btw`、`/model`、`/models`、`/effort` 等 Grok 命令；兼容 `/uasge` 拼写。`/model` 与 `/models` 只展示当前 Harness 的模型。
 - 空白会话可切换 Harness；首轮消息发出后锁定，避免一段历史由两个 Agent 引擎共同生成。
 - 多个 Grok 会话复用一个按需启动的 ACP 进程，空闲后自动关闭。
 - ACP 进程异常退出后，下一次请求会自动重启进程并恢复对应的 Grok 会话。
@@ -116,6 +116,7 @@ Grok Build 会话支持 Grok 返回的命令目录，并额外投影以下常用
 | `/context` | 查看上下文使用情况 |
 | `/session-info` | 查看 Grok 会话信息 |
 | `/btw <问题>` | 在不中断主任务的情况下提问 |
+| `/model`、`/models` | 选择当前 Harness 的模型；Grok 模式不显示 DSH 模型 |
 | `/model <模型>` | 切换 Grok 模型 |
 | `/effort <级别>` | 切换推理力度 |
 | `/compact`、`/goal`、`/workflow`、`/deep-research` | 交给 Grok Build 执行对应能力 |

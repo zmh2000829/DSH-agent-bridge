@@ -27,7 +27,7 @@
 - Grok Build mode shows only models and reasoning efforts reported by ACP and hides unrelated DSH agent presets.
 - ACP streaming output becomes native DSH answers, thoughts, tool calls, plans, and diffs.
 - Grok permission requests use the DSH approval interface.
-- Supports `/usage`, `/context`, `/session-info`, `/btw`, `/model`, and `/effort`, including the `/uasge` compatibility spelling.
+- Supports `/usage`, `/context`, `/session-info`, `/btw`, `/model`, `/models`, and `/effort`, including the `/uasge` compatibility spelling. `/model` and `/models` show only the active Harness's models.
 - The harness can change while a session is blank and locks after the first message to prevent mixed-engine history.
 - Grok sessions share one lazily started ACP process, which closes after the configured idle period.
 - If the ACP process exits unexpectedly, the next request restarts it and resumes the matching Grok session.
@@ -114,6 +114,7 @@ The report should show that DSH, Grok, the Bundle, the preset, and the client bu
 | `/context` | Show context usage |
 | `/session-info` | Show Grok session information |
 | `/btw <question>` | Ask a side question without interrupting the main task |
+| `/model`, `/models` | Select a model from the active Harness; Grok mode does not show DSH models |
 | `/model <model>` | Change the Grok model |
 | `/effort <level>` | Change reasoning effort |
 | `/compact`, `/goal`, `/workflow`, `/deep-research` | Forward the corresponding capability to Grok Build |

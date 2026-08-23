@@ -1,4 +1,7 @@
-# Add Grok Build as a selectable root harness without changing DSH packages.
+# Replace the native model UI with the Harness-aware contribution, then add Grok Build.
+- id: ui-model-selection
+  name: '@deepseek-ai/dsh-client-ui-model-selection'
+  disabled: true
 - insert:
     - id: grok-acp
       name: dsh-grok-acp

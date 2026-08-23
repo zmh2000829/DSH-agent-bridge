@@ -1,6 +1,6 @@
 {
   "name": "dsh-grok-acp",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "type": "module",
   "description": "Use Grok Build as an ACP-powered root agent inside DeepSeek Harness Web",
   "license": "MIT",
@@ -49,8 +49,7 @@
     "client": {
       "inject": [
         "@deepseek-ai/dsh-client-locale",
-        "@deepseek-ai/dsh-client-ui-conversation",
-        "@deepseek-ai/dsh-client-ui-model-selection"
+        "@deepseek-ai/dsh-client-ui-conversation"
       ],
       "platform": "web"
     }
@@ -58,7 +57,9 @@
   "scripts": {
     "build": "tsdown --config tsdown.config.ts",
     "test": "node --test tests/*.spec.js",
-    "check": "npm test && npm run build",
+    "test:bundle": "node tests/client-bundle-check.mjs",
+    "typecheck": "tsc --noEmit",
+    "check": "npm test && npm run typecheck && npm run build && npm run test:bundle",
     "prepack": "npm run check"
   },
   "engines": {
