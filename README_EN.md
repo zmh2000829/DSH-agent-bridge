@@ -23,8 +23,8 @@
 ## Features
 
 - Select **DSH** or **Grok Build** in the same `dsh web` composer.
-- DSH mode retains the Standard, PTC, Minimal, and Creator presets, installed models, and plugins.
-- Grok Build mode uses Grok's own models and hides unrelated DSH agent presets.
+- DSH mode reads the presets supplied by the current deployment and retains its installed models and plugins.
+- Grok Build mode shows only models and reasoning efforts reported by ACP and hides unrelated DSH agent presets.
 - ACP streaming output becomes native DSH answers, thoughts, tool calls, plans, and diffs.
 - Grok permission requests use the DSH approval interface.
 - Supports `/usage`, `/context`, `/session-info`, `/btw`, `/model`, and `/effort`, including the `/uasge` compatibility spelling.

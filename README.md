@@ -23,8 +23,8 @@
 ## 功能
 
 - 在同一个 `dsh web` 页面选择 **DSH** 或 **Grok Build**。
-- DSH 模式保留标准、PTC、极简和创造四种 Agent 预设，以及现有模型和插件。
-- Grok Build 模式使用 Grok 自带模型，并隐藏无关的 DSH Agent 预设。
+- DSH 模式动态读取当前部署提供的 Agent 预设，并保留现有模型和插件。
+- Grok Build 模式只展示 ACP 实际报告的模型和推理力度，并隐藏无关的 DSH Agent 预设。
 - ACP 流式输出映射为 DSH 的回答、思考、工具调用、计划和 diff。
 - Grok 权限请求进入 DSH 的批准界面。
 - 支持 `/usage`、`/context`、`/session-info`、`/btw`、`/model`、`/effort` 等 Grok 命令；兼容 `/uasge` 拼写。

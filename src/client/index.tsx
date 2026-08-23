@@ -29,6 +29,7 @@ interface HarnessSnapshot {
   dshPreset: string
   blank: boolean
   running: boolean
+  dshPresets: Array<{ id: string; name: string; description: string }>
   grok: {
     ready: boolean
     model: string
@@ -55,25 +56,6 @@ interface HostEnvelope {
 interface SessionHostRuntime {
   handleHostEnvelope: (envelope: HostEnvelope) => void
 }
-
-const FALLBACK_EFFORTS: GrokEffort[] = [
-  { id: 'low', label: 'low' },
-  { id: 'medium', label: 'medium' },
-  { id: 'high', label: 'high' },
-  { id: 'xhigh', label: 'xhigh' },
-]
-
-const FALLBACK_MODELS: GrokModel[] = [
-  { id: 'grok-4.6', name: 'Grok 4.6', efforts: FALLBACK_EFFORTS },
-  { id: 'grok-4.5', name: 'Grok 4.5', efforts: FALLBACK_EFFORTS },
-]
-
-const DSH_PRESETS = [
-  { id: 'standard', name: '标准模式', description: '功能完整的编码 Agent。' },
-  { id: 'code', name: 'PTC 模式', description: '通过 Code Mode SDK 组合多步操作。' },
-  { id: 'minimal', name: '极简模式', description: '仅提供持久 Bash 和文件编辑工具。' },
-  { id: 'cordis', name: '创造模式', description: '用于创建自定义 Agent preset。' },
-] as const
 
 const font = 'var(--dsw-font-family, ui-sans-serif, system-ui, sans-serif)'
 const wrap: CSSProperties = {
@@ -303,7 +285,7 @@ function HeroAgentPresetSeat({ sessions }: { sessions: SessionListStore }) {
   }, [open])
 
   if (snapshot === undefined || snapshot.harness === 'grok-build') return null
-  const current = DSH_PRESETS.find(preset => preset.id === snapshot.preset)
+  const current = snapshot.dshPresets.find(preset => preset.id === snapshot.preset)
   const label = current?.name ?? snapshot.preset
 
   const select = async (preset: string): Promise<void> => {
@@ -335,7 +317,7 @@ function HeroAgentPresetSeat({ sessions }: { sessions: SessionListStore }) {
       </button>
       {open && (
         <div role="menu" aria-label="Agent 预设" style={{ ...menu, right: 'auto', left: 0, bottom: 'auto', top: 'calc(100% + 8px)' }}>
-          {DSH_PRESETS.map(preset => (
+          {snapshot.dshPresets.map(preset => (
             <button
               key={preset.id}
               type="button"
@@ -364,12 +346,12 @@ function GrokModelSeat({
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
-  const models = snapshot.grok.models.length > 0 ? snapshot.grok.models : FALLBACK_MODELS
+  const models = snapshot.grok.models
   const current = models.find(model => model.id === snapshot.grok.model) ?? models[0]
-  const label = current?.name ?? snapshot.grok.model ?? 'Grok 4.6'
+  const label = current?.name ?? (snapshot.grok.model === 'unknown' ? 'Grok Build' : snapshot.grok.model)
   const effort = snapshot.grok.effort ?? current?.effort
   const triggerLabel = effort ? `${label} · ${effort}` : label
-  const efforts = (current?.efforts.length ?? 0) > 0 ? current!.efforts : FALLBACK_EFFORTS
+  const efforts = current?.efforts ?? []
 
   useEffect(() => {
     if (!open) return
@@ -398,12 +380,13 @@ function GrokModelSeat({
       {open && (
         <div role="listbox" aria-label="Grok Build 模型" style={menu}>
           <div style={{ padding: '4px 10px 6px', fontSize: 11, opacity: 0.55 }}>Grok Build 模型</div>
+          {models.length === 0 && <div style={{ padding: '8px 10px', fontSize: 12, opacity: 0.6 }}>Grok Build 未报告可选模型</div>}
           {models.map(model => (
             <button key={model.id} type="button" role="option" aria-selected={model.id === snapshot.grok.model} style={menuItem(model.id === snapshot.grok.model)} onClick={() => { void choose({ modelId: model.id }) }}>
               {model.name}
             </button>
           ))}
-          <div style={{ padding: '8px 10px 6px', fontSize: 11, opacity: 0.55 }}>推理力度</div>
+          {efforts.length > 0 && <div style={{ padding: '8px 10px 6px', fontSize: 11, opacity: 0.55 }}>推理力度</div>}
           {efforts.map(item => (
             <button key={item.id} type="button" role="option" aria-selected={item.id === effort} style={menuItem(item.id === effort)} onClick={() => { void choose({ effort: item.id }) }}>
               {item.label}
