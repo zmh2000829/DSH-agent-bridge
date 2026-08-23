@@ -13,7 +13,7 @@
 </div>
 
 <div align="center">
-  <img alt="Switching between DSH and Grok Build on the DSH home screen" src="./docs/assets/harness.gif" />
+  <img alt="Switching between DSH and Grok Build on the DSH home screen" src="https://raw.githubusercontent.com/zmh2000829/DSH-agent-bridge/main/docs/assets/harness.gif" />
 </div>
 
 `dsh-grok-acp` is an adapter in DSH Agent Bridge. It connects Grok Build as a root agent through Agent Client Protocol (ACP), while preserving the native DSH Web session, composer, tool rendering, permission, and Markdown diff interfaces.
@@ -35,7 +35,7 @@
 
 | DSH | Grok Build |
 |---|---|
-| ![DSH home](./docs/assets/dsh-home.png) | ![Grok Build home](./docs/assets/grok-home.png) |
+| ![DSH home](https://raw.githubusercontent.com/zmh2000829/DSH-agent-bridge/main/docs/assets/dsh-home.png) | ![Grok Build home](https://raw.githubusercontent.com/zmh2000829/DSH-agent-bridge/main/docs/assets/grok-home.png) |
 
 ## Architecture
 

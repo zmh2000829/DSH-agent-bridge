@@ -37,7 +37,6 @@
     "bin",
     "lib/*.js",
     "presets",
-    "docs/assets",
     "cordis.patch.yml",
     "README.md",
     "README_EN.md",

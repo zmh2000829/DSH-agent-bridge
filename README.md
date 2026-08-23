@@ -13,7 +13,7 @@
 </div>
 
 <div align="center">
-  <img alt="在 DSH 首页切换 DSH 与 Grok Build" src="./docs/assets/harness.gif" />
+  <img alt="在 DSH 首页切换 DSH 与 Grok Build" src="https://raw.githubusercontent.com/zmh2000829/DSH-agent-bridge/main/docs/assets/harness.gif" />
 </div>
 
 `dsh-grok-acp` 是 DSH Agent Bridge 的适配器。它通过 Agent Client Protocol（ACP）把 Grok Build 作为根 Agent 接入 DSH Web，并保留 DSH 原有的会话、输入框、工具展示、权限确认和 Markdown diff 界面。
@@ -35,7 +35,7 @@
 
 | DSH | Grok Build |
 |---|---|
-| ![DSH 首页](./docs/assets/dsh-home.png) | ![Grok Build 首页](./docs/assets/grok-home.png) |
+| ![DSH 首页](https://raw.githubusercontent.com/zmh2000829/DSH-agent-bridge/main/docs/assets/dsh-home.png) | ![Grok Build 首页](https://raw.githubusercontent.com/zmh2000829/DSH-agent-bridge/main/docs/assets/grok-home.png) |
 
 ## 工作方式
 
