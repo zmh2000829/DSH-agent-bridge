@@ -2,12 +2,13 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   permissionOutcome,
-  renderPlan,
+  planTodos,
   renderToolOutput,
   sessionBlank,
   toAcpPrompt,
 } from '../lib/render.js'
 import { isGrokPreset } from '../lib/constants.js'
+import { GrokWebAgent } from '../lib/grok-agent.js'
 
 describe('toAcpPrompt', () => {
   it('keeps text and flattens images', () => {
@@ -63,12 +64,64 @@ describe('renderToolOutput', () => {
   })
 })
 
-describe('renderPlan', () => {
-  it('formats entries', () => {
-    assert.equal(
-      renderPlan({ entries: [{ status: 'completed', content: 'one' }] }),
-      '- [completed] one',
+describe('planTodos', () => {
+  it('projects a whole ACP plan into the native DSH todo list', () => {
+    assert.deepEqual(
+      planTodos({ entries: [
+        { status: 'completed', content: ' Read the docs ' },
+        { status: 'in_progress', title: 'Run checks' },
+        { status: 'unknown', content: 'Package app' },
+        { status: 'pending', content: 'Package app' },
+        { status: 'pending', content: '   ' },
+      ] }),
+      [
+        { status: 'completed', content: 'Read the docs' },
+        { status: 'in_progress', content: 'Run checks' },
+        { status: 'pending', content: 'Package app' },
+      ],
     )
+  })
+
+  it('keeps an empty plan as an explicit empty todo snapshot', () => {
+    assert.deepEqual(planTodos({ entries: [] }), [])
+  })
+})
+
+describe('GrokWebAgent plan projection', () => {
+  it('logs the plan for the native todo panel without adding answer text', async () => {
+    const events = []
+    const agent = Object.create(GrokWebAgent.prototype)
+    Object.assign(agent, {
+      remoteSessionId: 'remote-1',
+      active: {},
+      session: {
+        append(type, data) {
+          events.push({ type, data })
+          return { seq: events.length }
+        },
+      },
+    })
+
+    await agent.handleUpdate({
+      sessionId: 'remote-1',
+      update: {
+        sessionUpdate: 'plan',
+        entries: [
+          { status: 'in_progress', content: 'Run checks' },
+          { status: 'pending', content: 'Package app' },
+        ],
+      },
+    })
+
+    assert.deepEqual(events, [{
+      type: 'todo/write',
+      data: {
+        todos: [
+          { status: 'in_progress', content: 'Run checks' },
+          { status: 'pending', content: 'Package app' },
+        ],
+      },
+    }])
   })
 })
 

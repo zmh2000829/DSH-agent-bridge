@@ -25,7 +25,7 @@
 - 在同一个 `dsh web` 页面选择 **DSH** 或 **Grok Build**。
 - DSH 模式动态读取当前部署提供的 Agent 预设，并保留现有模型和插件。
 - Grok Build 模式只展示 ACP 实际报告的模型和推理力度，并隐藏无关的 DSH Agent 预设。
-- ACP 流式输出映射为 DSH 的回答、思考、工具调用、计划和 diff。
+- ACP 流式输出映射为 DSH 的回答、思考、工具调用和 diff；计划更新进入输入框上方可折叠的原生任务面板，不再反复写入回答正文。
 - Grok 权限请求进入 DSH 的批准界面。
 - 支持 `/usage`、`/context`、`/session-info`、`/btw`、`/model`、`/models`、`/effort` 等 Grok 命令；兼容 `/uasge` 拼写。`/model` 与 `/models` 只展示当前 Harness 的模型。
 - 空白会话可切换 Harness；首轮消息发出后锁定，避免一段历史由两个 Agent 引擎共同生成。
