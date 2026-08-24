@@ -1,6 +1,6 @@
 {
   "name": "dsh-grok-acp",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "type": "module",
   "description": "Use Grok Build as an ACP-powered root agent inside DeepSeek Harness Web",
   "license": "MIT",

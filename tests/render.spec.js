@@ -8,6 +8,11 @@ import {
   toAcpPrompt,
 } from '../lib/render.js'
 import { isGrokPreset } from '../lib/constants.js'
+import {
+  activityMeta,
+  classifyActivityTool,
+  createActivityState,
+} from '../lib/activity.js'
 import { GrokWebAgent } from '../lib/grok-agent.js'
 
 describe('toAcpPrompt', () => {
@@ -122,6 +127,70 @@ describe('GrokWebAgent plan projection', () => {
         ],
       },
     }])
+  })
+})
+
+describe('Grok activity groups', () => {
+  it('classifies routine calls while keeping file mutations standalone', () => {
+    assert.equal(classifyActivityTool({ kind: 'read', title: 'read_file · README.md' }), 'read')
+    assert.equal(classifyActivityTool({ kind: 'execute', title: 'run_terminal_command · npm test' }), 'command')
+    assert.equal(classifyActivityTool({ kind: 'search', title: 'grep · tool_call' }), 'search')
+    assert.equal(classifyActivityTool({ kind: 'edit', title: 'apply_patch · README.md' }), 'edit')
+  })
+
+  it('logs routine calls as children and summarizes the whole turn', () => {
+    const events = []
+    const agent = Object.create(GrokWebAgent.prototype)
+    agent.session = {
+      append(type, data, options) {
+        events.push({ type, data, options })
+        return { seq: events.length }
+      },
+    }
+    const active = {
+      turn: 2,
+      step: 1,
+      toolNames: new Map(),
+      activity: createActivityState(2, 1),
+    }
+
+    agent.ensureToolCall(active, {
+      toolCallId: 'read-1', kind: 'read', title: 'read_file · README.md', rawInput: { path: 'README.md' },
+    })
+    agent.appendToolResult(active, 'read-1', 'contents', false, [])
+    agent.ensureToolCall(active, {
+      toolCallId: 'edit-1', kind: 'edit', title: 'apply_patch · README.md', rawInput: { path: 'README.md' },
+    })
+    agent.appendToolResult(active, 'edit-1', 'done', false, [{ path: 'README.md', oldText: 'a', newText: 'b' }])
+    agent.closeActivity(active)
+
+    assert.deepEqual(events.map(event => event.type), [
+      'tool/call',
+      'tool/code-dispatch-start',
+      'tool/code-dispatch',
+      'tool/call',
+      'tool/result',
+      'tool/result',
+    ])
+    assert.equal(events[0].data.name, 'grok_build_activity')
+    assert.equal(events[1].data.rootCallId, 'grok-activity:2:1')
+    assert.equal(events[3].data.name, 'apply_patch · README.md')
+    assert.deepEqual(events[5].data.meta.grokActivity, {
+      total: 2,
+      failed: 0,
+      counts: { read: 1, command: 0, search: 0, edit: 1, other: 0 },
+    })
+  })
+
+  it('marks the group failed so the collapsed row cannot hide errors', () => {
+    const activity = createActivityState(1, 1)
+    activity.counts.command = 1
+    activity.failed = 1
+    assert.deepEqual(activityMeta(activity), {
+      total: 1,
+      failed: 1,
+      counts: { read: 0, command: 1, search: 0, edit: 0, other: 0 },
+    })
   })
 })
 

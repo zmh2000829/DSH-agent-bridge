@@ -7,6 +7,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {
   InjectFace, PropsLocale, PropsRuntime, SessionIdOf, TranslateNS,
 } from '@deepseek-ai/dsh-client-ui-slots'
+import { GROK_ACTIVITY_TOOL, type ActivityMeta } from '../../lib/activity.js'
 import {
   modelCommandOptions,
   modelCommandSelection,
@@ -43,6 +44,17 @@ const en = {
   minimalDescription: 'Persistent bash and file editing tools.',
   cordisName: 'Creator mode',
   cordisDescription: 'Creates custom agent presets.',
+  activityRunning: 'Running',
+  activityCompleted: 'Completed',
+  activityFailed: 'Failed',
+  activityOperations: 'operations',
+  activityRead: 'Read',
+  activityCommand: 'Commands',
+  activitySearch: 'Search',
+  activityEdit: 'Changes',
+  activityOther: 'Other',
+  activityExpand: 'Show full timeline',
+  activityCollapse: 'Hide full timeline',
 } as const
 
 const zh: Record<keyof typeof en, string> = {
@@ -67,6 +79,17 @@ const zh: Record<keyof typeof en, string> = {
   minimalDescription: '提供持久 Bash 和文件编辑工具。',
   cordisName: '创造模式',
   cordisDescription: '用于创建自定义 Agent preset。',
+  activityRunning: '正在执行',
+  activityCompleted: '已完成',
+  activityFailed: '失败',
+  activityOperations: '个操作',
+  activityRead: '读文件',
+  activityCommand: '命令',
+  activitySearch: '搜索',
+  activityEdit: '修改',
+  activityOther: '其他',
+  activityExpand: '展开完整时间线',
+  activityCollapse: '收起完整时间线',
 }
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
@@ -74,6 +97,30 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     /** Copy owned by the Grok Build bridge controls. */
     'dsh-grok-acp': keyof typeof en
   }
+
+  interface SlotMap {
+    /** Grok activity row registered into DSH's keyed Tool view seat. */
+    'tool.call.toolview': { kind: 'keyed'; scope: 'session'; owner: ActivityToolOwner }
+  }
+}
+
+interface ActivityToolBlock {
+  kind?: 'tool-result'
+  name?: string
+  call?: { name: string; argsRaw: string } | null
+  meta?: unknown
+  isError?: boolean
+  subCalls: readonly ActivityToolBlock[]
+}
+
+interface ActivityToolOwner {
+  callId: string
+  toolName: string
+  block: ActivityToolBlock
+  cwd?: string
+  home?: string
+  openFile: (path: string) => void
+  inspect?: () => void
 }
 
 type Translate = TranslateNS<typeof LOCALE_NS>
@@ -171,6 +218,87 @@ interface CommandUiFace {
 }
 
 const font = 'var(--dsw-font-family, ui-sans-serif, system-ui, sans-serif)'
+const activityStyleId = 'dsh-grok-acp-activity-style'
+
+function installActivityStyle(): () => void {
+  const existing = document.getElementById(activityStyleId)
+  if (existing !== null) return () => undefined
+  const style = document.createElement('style')
+  style.id = activityStyleId
+  style.textContent = `
+    [data-chat-call-id]:has(> [data-grok-activity][data-expanded="false"]) > [data-subcalls] { display: none; }
+    [data-grok-activity][data-running="true"] [data-activity-dot] { animation: dsh-grok-activity-pulse 1.25s ease-in-out infinite; }
+    @keyframes dsh-grok-activity-pulse { 50% { opacity: .35; transform: scale(.75); } }
+  `
+  document.head.append(style)
+  return () => { style.remove() }
+}
+
+function activityMetaOf(block: ActivityToolBlock): ActivityMeta | undefined {
+  if (typeof block.meta !== 'object' || block.meta === null) return undefined
+  const value = (block.meta as { grokActivity?: unknown }).grokActivity
+  if (typeof value !== 'object' || value === null) return undefined
+  const candidate = value as Partial<ActivityMeta>
+  if (typeof candidate.total !== 'number' || typeof candidate.failed !== 'number') return undefined
+  if (typeof candidate.counts !== 'object' || candidate.counts === null) return undefined
+  return candidate as ActivityMeta
+}
+
+type ActivityToolRowProps = PropsRuntime<'tool.call.toolview'> & PropsLocale<typeof LOCALE_NS>
+
+function GrokActivityRow({ block, t }: ActivityToolRowProps) {
+  const meta = activityMetaOf(block)
+  const failed = meta?.failed ?? (block.isError ? 1 : 0)
+  const running = block.kind !== 'tool-result'
+  const [expanded, setExpanded] = useState(failed > 0)
+  useEffect(() => {
+    if (failed > 0) setExpanded(true)
+  }, [failed])
+
+  const total = meta?.total ?? block.subCalls.length
+  const head = running
+    ? `${t('activityRunning')} ${Math.max(total, 1)} ${t('activityOperations')}`
+    : failed > 0
+      ? `${t('activityFailed')} ${failed} · ${total} ${t('activityOperations')}`
+      : `${t('activityCompleted')} ${total} ${t('activityOperations')}`
+  const categoryKeys = [
+    ['read', 'activityRead'],
+    ['command', 'activityCommand'],
+    ['search', 'activitySearch'],
+    ['edit', 'activityEdit'],
+    ['other', 'activityOther'],
+  ] as const
+  const detail = meta === undefined ? [] : categoryKeys.flatMap(([category, key]) => (
+    meta.counts[category] > 0 ? [`${t(key)} ${meta.counts[category]}`] : []
+  ))
+  const dotColor = failed > 0 ? '#d94c4c' : running ? '#2979ff' : '#3ba55d'
+
+  return (
+    <button
+      type="button"
+      data-grok-activity
+      data-expanded={String(expanded)}
+      data-running={String(running)}
+      aria-expanded={expanded}
+      title={expanded ? t('activityCollapse') : t('activityExpand')}
+      onClick={() => { setExpanded(value => !value) }}
+      style={{
+        width: '100%', display: 'flex', alignItems: 'center', gap: 8, minHeight: 34,
+        padding: '6px 8px', border: 0, borderRadius: 8, background: 'transparent',
+        color: 'var(--dsw-alias-label-primary, currentColor)', cursor: 'pointer',
+        fontFamily: font, fontSize: 12, textAlign: 'left',
+      }}
+    >
+      <span data-activity-dot aria-hidden style={{ width: 7, height: 7, flex: '0 0 auto', borderRadius: '50%', background: dotColor }} />
+      <strong style={{ flex: '0 0 auto', fontWeight: 650 }}>Grok Build</strong>
+      <span style={{ opacity: 0.72, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {head}{detail.length > 0 ? ` · ${detail.join(' · ')}` : ''}
+      </span>
+      <span aria-hidden style={{ marginLeft: 'auto', flex: '0 0 auto', opacity: 0.5 }}>{expanded ? '⌃' : '⌄'}</span>
+    </button>
+  )
+}
+
 const wrap: CSSProperties = {
   position: 'relative',
   display: 'inline-flex',
@@ -596,7 +724,13 @@ export const inject = ['slots', 'locale', 'commandUi', 'connection', 'sessions',
 
 export function apply(ctx: Context): void {
   ctx.effect(() => ctx.locale.register(LOCALE_NS, { zh, en }), 'dsh-grok-acp locale dictionaries')
+  ctx.effect(installActivityStyle, 'dsh-grok-acp activity group styles')
   const t = ctx.locale.bind(LOCALE_NS) as Translate
+  ctx.slots.inject('tool.call.toolview', () => ctx.slots.register({
+    name: 'tool.call.toolview',
+    key: GROK_ACTIVITY_TOOL,
+    locale: LOCALE_NS,
+  }, GrokActivityRow))
   ctx.plugin(ModelDirectoryResolver, { blockReason: () => t('modelUnavailable') })
   ctx.inject(['sessions'], (scope: Context) => {
     const sessions = scope.get('sessions')
