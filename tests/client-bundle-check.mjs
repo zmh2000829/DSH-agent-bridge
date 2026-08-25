@@ -10,5 +10,10 @@ assert.deepEqual(
   'the client bundle may require only DSH platform seed modules',
 )
 assert.doesNotMatch(bundle, /dsh-client-ui-model-selection/)
+assert.match(
+  bundle,
+  /\[data-chat-call-id\]:has\(\[data-grok-activity\]\[data-expanded=\\?"false\\?"\]\) > \[data-subcalls\]/,
+  'a collapsed Grok activity group must hide its nested tool timeline',
+)
 
 console.log('client bundle module table check passed')

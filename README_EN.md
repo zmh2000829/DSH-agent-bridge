@@ -26,8 +26,9 @@
 - DSH mode reads the presets supplied by the current deployment and retains its installed models and plugins.
 - Grok Build mode shows only models and reasoning efforts reported by ACP and hides unrelated DSH agent presets.
 - ACP streaming output becomes native DSH answers, thoughts, tool calls, and diffs; plan updates use the collapsible task panel above the composer instead of repeating inside the answer.
-- Each Grok turn collapses routine tool calls into one activity summary with an expandable timeline; running work, failures, and permission requests remain prominent, while file changes and Markdown diffs stay independent.
+- Each Grok turn uses one prominent activity summary. Click it to expand the full timeline; failures expand automatically. File changes, Markdown diffs, and permission requests remain independent.
 - Grok permission requests use the DSH approval interface.
+- DSH `Full access` also governs Grok ACP file access and approval behavior, including local Grok skills outside the workspace.
 - Supports `/usage`, `/context`, `/session-info`, `/btw`, `/model`, `/models`, and `/effort`, including the `/uasge` compatibility spelling. `/model` and `/models` show only the active Harness's models.
 - The harness can change while a session is blank and locks after the first message to prevent mixed-engine history.
 - Grok sessions share one lazily started ACP process, which closes after the configured idle period.

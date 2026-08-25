@@ -130,6 +130,79 @@ describe('GrokWebAgent plan projection', () => {
   })
 })
 
+describe('GrokWebAgent assistant persistence', () => {
+  it('commits streamed output as interrupted when a turn is cancelled', () => {
+    const events = []
+    const agent = Object.create(GrokWebAgent.prototype)
+    Object.assign(agent, {
+      grokModel: 'grok-4.6',
+      session: {
+        append(type, data, options) {
+          events.push({ type, data, options })
+          return { seq: events.length }
+        },
+      },
+    })
+    const active = {
+      turn: 1,
+      step: 1,
+      text: 'partial answer',
+      reasoning: 'partial reasoning',
+      textStarted: true,
+      reasoningStarted: true,
+      textIndex: 1,
+      reasoningIndex: 0,
+      chunkSeqs: [10, 11],
+      assistantCommitted: false,
+    }
+
+    agent.commitAssistant(active, true)
+
+    assert.deepEqual(events.map(event => event.type), [
+      'assistant/chunk',
+      'assistant/chunk',
+      'assistant/message',
+    ])
+    assert.equal(events[2].data.interrupted, true)
+    assert.deepEqual(events[2].data.message.content, [
+      { type: 'reasoning', text: 'partial reasoning' },
+      { type: 'text', text: 'partial answer' },
+    ])
+    assert.deepEqual(events[2].options.sourceEventSeqs, [10, 11, 1, 2])
+  })
+
+  it('commits assistant output only once', () => {
+    const events = []
+    const agent = Object.create(GrokWebAgent.prototype)
+    Object.assign(agent, {
+      session: {
+        append(type, data, options) {
+          events.push({ type, data, options })
+          return { seq: events.length }
+        },
+      },
+    })
+    const active = {
+      turn: 1,
+      step: 1,
+      text: 'done',
+      reasoning: '',
+      textStarted: false,
+      reasoningStarted: false,
+      textIndex: 0,
+      reasoningIndex: undefined,
+      chunkSeqs: [],
+      assistantCommitted: false,
+    }
+
+    agent.commitAssistant(active, false)
+    agent.commitAssistant(active, true)
+
+    assert.equal(events.filter(event => event.type === 'assistant/message').length, 1)
+    assert.equal(events[0].data.interrupted, undefined)
+  })
+})
+
 describe('Grok activity groups', () => {
   it('classifies routine calls while keeping file mutations standalone', () => {
     assert.equal(classifyActivityTool({ kind: 'read', title: 'read_file · README.md' }), 'read')

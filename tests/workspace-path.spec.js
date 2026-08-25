@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, realpath, rm, symlink, writeFile } from 'node:fs/promis
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { resolveWorkspacePath } from '../lib/workspace-path.js'
+import { sessionHasFullAccess } from '../lib/session-access.js'
 
 async function withWorkspace(run) {
   const root = await mkdtemp(join(tmpdir(), 'dsh-grok-acp-'))
@@ -52,5 +53,26 @@ describe('resolveWorkspacePath', () => {
       const file = join(outside, 'file.txt')
       assert.equal(await resolveWorkspacePath(file, workspace, 'write', true), file)
     })
+  })
+})
+
+describe('sessionHasFullAccess', () => {
+  it('follows the latest DSH sandbox mode', () => {
+    assert.equal(sessionHasFullAccess({ events: [
+      { type: 'permission/preset', data: { preset: 'danger-full-access' } },
+      { type: 'sandbox/mode', data: { mode: 'danger-full-access' } },
+    ] }), true)
+    assert.equal(sessionHasFullAccess({ events: [
+      { type: 'permission/preset', data: { preset: 'danger-full-access' } },
+      { type: 'sandbox/mode', data: { mode: 'danger-full-access' } },
+      { type: 'sandbox/mode', data: { mode: 'workspace-write' } },
+    ] }), false)
+  })
+
+  it('uses the permission preset when no sandbox event exists', () => {
+    assert.equal(sessionHasFullAccess({ events: [
+      { type: 'permission/preset', data: { preset: 'danger-full-access' } },
+    ] }), true)
+    assert.equal(sessionHasFullAccess({ events: [] }), false)
   })
 })
